@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестирование группы</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap');
+
+        :root {
+            --bg-color: #121826;
+            --surface-color: #1a2233;
+            --primary-color: #4f46e5;
+            --secondary-color: #7c3aed;
+            --text-color: #e5e7eb;
+            --text-muted: #9ca3af;
+            --success-color: #22c55e;
+            --error-color: #ef4444;
+            --font-family: 'Montserrat', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Экраны --- */
+        .screen {
+            padding: 40px;
+            display: none; /* Все экраны скрыты по умолчанию */
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .screen.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* --- Экран входа --- */
+        #login-screen h1 {
+            color: var(--text-color);
+        }
+        #students-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .student-card {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            border: 2px solid transparent;
+        }
+        .student-card:hover {
+            transform: translateY(-5px);
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
+
+        /* --- Модальное окно пароля --- */
+        #password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none; /* Скрыто по умолчанию */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        #password-modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background-color: var(--surface-color);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-content h3 {
+            margin-bottom: 20px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid var(--primary-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        .modal-content .error-message {
+            color: var(--error-color);
+            min-height: 20px;
+            margin-bottom: 10px;
+        }
+        .modal-content button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .modal-content button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* --- Экран теста --- */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #timer {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        #progress-text {
+            color: var(--text-muted);
+        }
+        #question-text {
+            font-size: 1.4rem;
+            margin-bottom: 30px;
+            min-height: 80px;
+        }
+        #options-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        .option {
+            background-color: var(--bg-color);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid var(--surface-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .option:hover:not(.disabled) {
+            border-color: var(--secondary-color);
+        }
+        .option.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+        .option.incorrect {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+        }
+        .option.disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* --- Экран результатов --- */
+        #results-screen h2 {
+            margin-bottom: 10px;
+        }
+        #score-text {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+        #results-summary {
+            background: var(--bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result-item {
+            margin-bottom: 15px;
+        }
+        .result-item p {
+            font-weight: 500;
+        }
+        .result-item .user-answer.correct {
+            color: var(--success-color);
+        }
+        .result-item .user-answer.incorrect {
+            color: var(--error-color);
+            text-decoration: line-through;
+        }
+        .result-item .correct-answer {
+            color: var(--success-color);
+            margin-left: 10px;
+        }
+
+        #retake-quiz-btn, #back-to-login-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        #retake-quiz-btn:hover, #back-to-login-btn:hover {
+            background-color: var(--secondary-color);
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="login-screen" class="screen active">
+            <h1>Выберите себя из списка</h1>
+            <div id="students-grid">
+                </div>
+        </div>
+
+        <div id="quiz-screen" class="screen">
+            <div class="quiz-header">
+                <div id="progress-text">Вопрос 1 / 20</div>
+                <div id="timer">15:00</div>
+            </div>
+            <div id="question-container">
+                <h2 id="question-text">Текст вопроса...</h2>
+                <div id="options-container">
+                    </div>
+            </div>
+        </div>
+
+        <div id="results-screen" class="screen">
+            <h2>Ваш результат</h2>
+            <p id="score-text">15 / 20</p>
+            <div id="results-summary">
+                </div>
+            <p style="text-align:center; color: var(--text-muted); margin-bottom: 20px;">Сделайте скриншот этого окна и отправьте в группу.</p>
+            <button id="retake-quiz-btn">Пройти тест заново</button>
+            <button id="back-to-login-btn">Вернуться к списку</button>
+        </div>
+    </div>
+
+    <div id="password-modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Вход для ...</h3>
+            <form id="password-form">
+                <p>Введите вашу дату рождения в формате ДД.ММ.ГГГГ</p>
+                <input type="text" id="password-input" placeholder="например, 01.01.2005" required>
+                <div class="error-message" id="error-message"></div>
+                <button type="submit">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    // ====================================================================================
+    // --- ВАШИ ДАННЫЕ ЗДЕСЬ ---
+    // Заполните этот блок своими данными
+    // ====================================================================================
+
+    // 1. ДАННЫЕ ДЛЯ TELEGRAM БОТА
+    const TELEGRAM_CONFIG = {
+        BOT_TOKEN: '1730744154:AAGxL3yNgmoN3LOZvOWdNGu6Wgxt81TacXE',
+        CHAT_ID: '-1002786023091'
+    };
+
+    // 2. СПИСОК УЧАСТНИКОВ
+    const studentsData = [
+        {
+            id: 1,
+            name: 'Абдуазимов Бекмурод',
+            password: '14.03.2008',
+            personalQuestions: [
+                { question: 'Какое у Бекмурода хобби?', options: ['Спорт', 'видеоигры', 'Музыка', 'Прогулки'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый цвет Бекмурода?', options: ['Красный', 'Синий', 'Черный', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Бекмурод предпочитает?', options: ['Чай', 'Кофе', 'Сок', 'Вода'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое животное Бекмурода?', options: ['Собака', 'Кошка', 'Нет правильного ответа', 'Другой вариант'], correctAnswer: 'Любой ответ' },
+                { question: 'В какой игре Бекмурод проводит больше всего времени?', options: ['MLBB', 'CS:GO', 'PUBG', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' }
+            ]
+        },
+        {
+            id: 2,
+            name: 'Абдулхаирова Муниса',
+            password: '29.08.2008',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Мунисе?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года Мунисы?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Муниса хотела поехать?', options: ['На море', 'В горы', 'В большой город', 'Куда мечтает'], correctAnswer: 'Любой ответ' },
+                { question: 'Какой язык изучает Муниса?', options: ['Арабский', 'Испанский', 'Язык жестов', 'Французкий'], correctAnswer: 'Любой ответ' },    
+                { question: 'Есть-ли домашние питомцы?', options: ['Да', 'Нет', 'Нет правильного ответа', 'Все ответы правильные'], correctAnswer: 'Любой ответ' },  
+            ]
+        },
+        {
+            id: 3,
+            name: 'Абдукаримов Хисравшох',
+            password: '30.05.2009',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Хисравшох?', options: ['Футбол', 'Баскетбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Хисравшох?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Хисравшох делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Читает книги'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 4,
+            name: 'Алимжанов Шахриёр',
+            password: '14.02.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Шахриёр?', options: ['Футбол', 'Воллейбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Шахриёра?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Шахриёр делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 5,
+            name: 'Арзиматов Сардор',
+            password: '10.11.2007',
+            personalQuestions: [
+                { question: 'В какие игры любит играть Сардор на парах?', options: ['В карты', 'PUBG', 'Наблюдать за девушкаами', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что больше ценит Сардор в своем будущем?', options: ['Семейное благополучие', 'Мани-мани(деньги)', 'Любовные отношения', 'Родителей'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Сардор делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 6,
+            name: 'Бугаев Эммануил',
+            password: '17.10.2008',
+            personalQuestions: [
+                { question: 'Какое у Эммануила хобби?', options: ['Спорт', 'видеоигры', 'Музыка', 'Прогулки'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый цвет Эммануила?', options: ['Красный', 'Синий', 'Черный', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Эммануил предпочитает?', options: ['Чай', 'Кофе', 'Сок', 'Вода'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое животное Эммануила?', options: ['Собака', 'Кошка', 'Нет правильного ответа', 'Другой вариант'], correctAnswer: 'Любой ответ' },
+                { question: 'В какой игре Эммануил проводит больше всего времени?', options: ['MLBB', 'CS:GO', 'PUBG', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' }
+            ]
+        },
+        {
+            id: 7,
+            name: 'Денисов Данил',
+            password: '01.05.2008',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Данилу?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года Данила?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Данил хотел поехать?', options: ['На море', 'В горы', 'В большой город', 'Куда мечтает'], correctAnswer: 'Любой ответ' },
+                { question: 'Какой язык изучает Данил?', options: ['Арабский', 'Английский', 'Язык жестов', 'Не MLBBский'], correctAnswer: 'Любой ответ' },    
+                { question: 'Есть-ли домашние питомцы?', options: ['Да', 'Нет', 'Нет правильного ответа', 'Все ответы правильные'], correctAnswer: 'Любой ответ' },  
+                { question: 'Какой вид спорта предпочитает Данил?', options: ['Футбол', 'Воллейбол', 'Баскетбол)', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'В какой видеоигре Данил проводит больше всего времени?', options: ['MLBB', 'CS:GO', 'PUBG', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' }   
+            ]
+        },
+        {
+            id: 8,
+            name: 'Исмаилова Диляра',
+            password: '27.10.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Диляра?', options: ['Воллейбол', 'Баскетбол', 'Поспать', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Диляры?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Диляра делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Читает книги'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 9,
+            name: 'Йулдашева Шамсинур',
+            password: '28.08.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Шамсинур?', options: ['Футбол', 'Воллейбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Шамсинур?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Шамсинур делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Жанр послдней книги, которую прочитала Шамсинур?', options: ['Учебная/Научная', 'Драма/Романтика', 'Литература', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 10,
+            name: 'Кенжабаев Жандос',
+            password: '05.10.2008',
+            personalQuestions: [
+                { question: 'В какие игры любит играть Жандос на парах?', options: ['В карты', 'PUBG', 'Наблюдать за девушкаами', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что или кого больше ценит Жандос в своем будущем?', options: ['Себя', 'Деньги для себя', 'Счастье для себя', 'В любом случае себя'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Жандос делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 11,
+            name: 'Комаров Максим',
+            password: '05.10.2008',
+            personalQuestions: [
+                { question: 'Насколько ленивым человеком(в процентах) является Максим?', options: ['50%', '33%', '99%', 'Гиперактивный, не ленится вообще'], correctAnswer: 'Любой ответ' },
+                { question: 'Какое у Максима хобби?', options: ['Спорт', 'видеоигры', 'Музыка', 'Моделинг/актерство'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый цвет Максима?', options: ['Красный', 'Синий', 'Черный', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Максим предпочитает?', options: ['Чай', 'Кофе', 'Сок', 'Вода'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое животное Максима?', options: ['Собака', 'Кошка', 'Нет правильного ответа', 'Другой вариант'], correctAnswer: 'Любой ответ' },
+                { question: 'В какой игре Максим проводит больше всего времени?', options: ['MLBB', 'CS:GO', 'PUBG', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' }
+            ]
+        },
+        {
+            id: 12,
+            name: 'Лаврентьева Полина',
+            password: '21.04.2008',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Полине?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года Полины?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Полина хотела поехать?', options: ['На море', 'В горы', 'В большой город', 'Подальше отсюда'], correctAnswer: 'Любой ответ' },
+                { question: 'Какой язык изучает Полина?', options: ['Арабский', 'Английский', 'Язык жестов', 'Фе, пусть остальные учат мой родной язык'], correctAnswer: 'Любой ответ' },    
+                { question: 'Есть-ли домашние питомцы?', options: ['Да', 'Нет', 'Нет правильного ответа', 'Все ответы правильные'], correctAnswer: 'Любой ответ' },  
+            ]
+        },
+        {
+            id: 13,
+            name: 'Мамбетниязова Махлиё',
+            password: '29.07.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Махлиё?', options: ['Футбол', 'Баскетбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Махлиё?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Махлиё делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Читает книги'], correctAnswer: 'Любой ответ' },
+                { question: 'Какой язык программирования планирует изучить Махлиё?', options: ['JavaScript', 'Python', 'HTML/CSS', 'Никакой)'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 14,
+            name: 'Муллахаметов Иброхим',
+            password: '21.08.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Иброхим?', options: ['Футбол', 'Воллейбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Иброхим?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Иброхим делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Какой язык программирования планирует изучить Иброхим?', options: ['JavaScript', 'Python', 'HTML/CSS', 'Никакой)'], correctAnswer: 'Любой ответ' },
+                { question: 'С кем постоянно на парах общается Иброхим?', options: ['Самандар', 'Самандар', 'Самандар', 'Самандар)'], correctAnswer: 'Любой ответ' },
+
+            ]
+        },
+        {
+            id: 15,
+            name: 'Мухторов Абдулазиз',
+            password: '03.11.2008',
+            personalQuestions: [
+                { question: 'В какие игры любит играть Абдулазиз на парах?', options: ['В карты', 'PUBG', 'Наблюдать за девушкаами', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что или кого больше ценит Абдулазиз в своем будущем?', options: ['Себя', 'Деньги для себя', 'Счастье для себя', 'В любом случае себя'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Абдулазиз делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 16,
+            name: 'Олимжанов Шохрух',
+            password: '10.12.2007',
+            personalQuestions: [
+                { question: 'Какое у Шохруха хобби?', options: ['Спорт', 'Видеоигры', 'Музыка', 'Прогулки'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый цвет Шохруха?', options: ['Красный', 'Синий', 'Черный', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Шохрух предпочитает?', options: ['Чай', 'Кофе', 'Сок', 'Вода'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое животное Шохрух?', options: ['Собака', 'Кошка', 'Нет правильного ответа', 'Другой вариант'], correctAnswer: 'Любой ответ' },
+                { question: 'В какой игре Бекмурод проводит больше всего времени?', options: ['MLBB', 'CS:GO', 'PUBG', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Карты или учёба?', options: ['Карты', 'Учеба', 'Все ответы верны', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' }
+            ]
+        },
+        {
+            id: 17,
+            name: 'Равшанов Самандар',
+            password: '26.11.2008',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Самандару?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Самандар хотел поехать?', options: ['На море', 'В горы', 'В большой город', 'Куда мечтает'], correctAnswer: 'Любой ответ' },
+                { question: 'С кем любит поболтать Самандар?', options: ['Иброхим', 'Иброхим', 'Иброхим', 'Иброхим'], correctAnswer: 'Любой ответ' },    
+                { question: 'Есть-ли домашние питомцы?', options: ['Да', 'Нет', 'Нет правильного ответа', 'Все ответы правильные'], correctAnswer: 'Любой ответ' },  
+            ]
+        },
+        {
+            id: 18,
+            name: 'Раимберганов Санжар',
+            password: '08.01.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Санжар?', options: ['Футбол', 'Баскетбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Санжар?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Санжар делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Читает книги'], correctAnswer: 'Любой ответ' },
+                { question: 'Собирал ли Санжар целый системный блок пк на время?', options: ['Да', 'Нет', 'Фе, я только теоретик', 'Бум Бум'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 19,
+            name: 'Рахимбердиева Айнура',
+            password: '01.04.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Айнура?', options: ['Футбол', 'Воллейбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Айнура?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Айнура делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 20,
+            name: 'Рахимов Шохрух',
+            password: '05.02.2008',
+            personalQuestions: [
+                { question: 'В какие игры любит играть Шохрух на парах?', options: ['MLBB', 'PUBG', 'Наблюдать за девушкаами', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что или кого больше ценит Шохрух в своем будущем?', options: ['Себя', 'Деньги для себя', 'Счастье для себя', 'В любом случае себя'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Шохрух делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Каким органом группы является Шохрух?', options: ['Сердцем', 'Венами', 'Язычком', 'Мозгом'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 21,
+            name: 'Самойлов Мария',
+            password: '05.06.2008',
+            personalQuestions: [
+                { question: 'Какое у Маши хобби?', options: ['Спорт', 'Видеоигры', 'Музыка', 'Прогулки'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый цвет Марии?', options: ['Красный', 'Синий', 'Черный', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Мария предпочитает?', options: ['Чай', 'Кофе', 'Сок', 'Вода'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое животное Марии?', options: ['Собака', 'Кошка', 'Нет правильного ответа', 'Другой вариант'], correctAnswer: 'Любой ответ' },
+                { question: 'В какой соц.сети Мария проводит больше всего времени?', options: ['Insta', 'Telega', 'Whatsapp', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Минусы колледж по мнению Марии?', options: ['Обязательная форма', 'Несоответсвующий уровень учетей', 'Немного глупые одногруппники', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' }
+            ]
+        },
+        {
+            id: 22,
+            name: 'Сон Темур',
+            password: '05.06.2008',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Джин Ву?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года ДЖин Ву?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Темур хотел поехать?', options: ['На море', 'В горы', 'В большой город', 'Куда мечтает'], correctAnswer: 'Любой ответ' },
+                { question: 'Какой язык программирования планирует изучить Тимур?', options: ['JavaScript', 'Python', 'Фе, не планирую никакой', 'only MLBB'], correctAnswer: 'Любой ответ' },    
+                { question: 'Есть-ли домашние питомцы?', options: ['Да', 'Нет', 'Нет правильного ответа', 'Все ответы правильные'], correctAnswer: 'Любой ответ' },  
+            ]
+        },
+        {
+            id: 23,
+            name: 'Султанаев Наиль',
+            password: '05.05.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Наиль?', options: ['Футбол', 'Баскетбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Наиля?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Наиль делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Читает книги'], correctAnswer: 'Любой ответ' },
+                { question: 'Почему Наиль активно не учавствует в жизни группы?', options: ['Не люблю учебу', 'Не люблю ДЗ', 'Пофэк на группу', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 24,
+            name: 'Султансаитов Амирхон',
+            password: '01.04.2009',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Амирхон?', options: ['Футбол', 'Воллейбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Амирхона?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Амирхон делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 25,
+            name: 'Сухов Дмитрий',
+            password: '13.07.2008',
+            personalQuestions: [
+                { question: 'В какие игры любит играть Дима на парах?', options: ['MLBB', 'PUBG', 'Наблюдать за девушкаами', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что больше ценит Дима в своем будущем?', options: ['Своё будущее', 'Деньги', 'Работу/Карьеру', 'Семейное благополучие'], correctAnswer: 'Любой ответ' },
+                { question: 'Чем Дима занимается в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 26,
+            name: 'Темирбаев Линур',
+            password: '07.10.2008',
+            personalQuestions: [
+                { question: 'Какое у Линура хобби?', options: ['Спорт', 'видеоигры', 'Музыка', 'Прогулки'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый цвет Линура?', options: ['Красный', 'Синий', 'Черный', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Линур предпочитает?', options: ['Чай', 'Кофе', 'Сок', 'Вода'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое животное Линура?', options: ['Собака', 'Кошка', 'Нет правильного ответа', 'Другой вариант'], correctAnswer: 'Любой ответ' },
+                { question: 'В какой игре Линура проводит больше всего времени?', options: ['MLBB', 'CS:GO', 'PUBG', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Интересно ли ведет уроки учитель по учебной практике?', options: ['Конечно', 'Нормально', 'Удовлетворительно', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' }
+            ]
+        },
+        {
+            id: 27,
+            name: 'Тлеубаева Николь',
+            password: '16.05.2007',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Николь?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года Николь?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Николь хотела поехать?', options: ['На море', 'В горы', 'В большой город', 'Куда мечтает'], correctAnswer: 'Любой ответ' },
+                { question: 'Чем в свободное время занимается Николь?', options: ['Спорт', 'Турниры', 'Гулянки', 'Все ответы верны)'], correctAnswer: 'Любой ответ' },    
+                { question: 'Есть-ли домашние питомцы?', options: ['Да', 'Нет', 'Нет правильного ответа', 'Все ответы правильные'], correctAnswer: 'Любой ответ' },  
+            ]
+        },
+        {
+            id: 28,
+            name: 'Турсунбаев Галимжан',
+            password: '07.12.2008',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Галимжан?', options: ['Футбол', 'Баскетбол', 'Плавание', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Галимжана?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Что Галимжан делает в свободное время?', options: ['Играет в видеоигры', 'Смотрит сериалы', 'Гуляет с друзьями', 'Читает книги'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 29,
+            name: 'Худайбердин Рамеш',
+            password: '24.10.2007',
+            personalQuestions: [
+                { question: 'Какой вид спорта предпочитает Рамеш?', options: ['Баскетбол', 'Воллейбол', 'Киберспорт', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимый музыкальный жанр Рамеша?', options: ['Рок', 'Поп', 'Рэп', 'Классика'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимая линия Рамэша в ML', options: ['Лес/Эксп', 'Эксп/Роум/Мид', 'Мид/Голд', 'Универсальный солдат'], correctAnswer: 'Любой ответ' },
+                { question: 'Что для тебя значит Данил?', options: ['Одногруппник', 'Друг', 'Больше чем просто друг', 'Подумай хорошенько))'], correctAnswer: 'Любой ответ' },
+            ]
+        },
+        {
+            id: 30,
+            name: 'Хакимова Зулайхо',
+            password: '29.10.2008',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Зулайхо?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года Зулайхо?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Зулайхо хотела поехать?', options: ['На море', 'В горы', 'В большой город', 'Куда мечтает'], correctAnswer: 'Любой ответ' },
+                { question: 'Чем в свободное время занимается Зулайхо?', options: ['Спорт', 'Турниры', 'Гулянки', 'Все ответы верны)'], correctAnswer: 'Любой ответ' },    
+            ]
+        },
+        {
+            id: 31,
+            name: 'Югай Елизаветта',
+            password: '10.05.2008',
+            personalQuestions: [
+                { question: 'Какой жанр фильмов нравится Елизаветте?', options: ['Комедия', 'Драма', 'Фантастика', 'Боевик'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года Елизаветты?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Куда бы Елизаветта хотела поехать?', options: ['На море', 'В горы', 'В большой город', 'Куда мечтает'], correctAnswer: 'Любой ответ' },
+                { question: 'Чем в свободное время занимается Елизаветта?', options: ['Спорт', 'Турниры', 'Гулянки', 'Все ответы верны)'], correctAnswer: 'Любой ответ' },    
+            ]
+        },
+        {
+            id: 32,
+            name: 'Тулабаев Шукриддин',
+            password: '18.07.2008',
+            personalQuestions: [
+                { question: 'Какой жанр игр нравится Шукриддину?', options: ['экшн', 'стрелялки', 'pvp', 'королевские битвы'], correctAnswer: 'Любой ответ' },
+                { question: 'Любимое время года Шукриддина?', options: ['Лето', 'Осень', 'Зима', 'Весна'], correctAnswer: 'Любой ответ' },
+                { question: 'Какой вид спорта предпочитает Шукриддин?', options: ['Баскетбол', 'Воллейбол', 'Киберспорт', 'Нет правильного ответа'], correctAnswer: 'Любой ответ' },
+            ]
+        }
+    ];
+
+    // 3. БАЗА ТЕХНИЧЕСКИХ ВОПРОСОВ
+    // Я объединил и удалил дубликаты из базы технических вопросов для чистоты кода
+    const technicalQuestions = [
+        { "question": "Что означает HTML?", "options": ["Hyper Text Markup Language", "Hyperlinks and Text Markup Language", "Home Tool Markup Language", "Hyper Tool Multi Language"], correctAnswer: "Hyper Text Markup Language" },
+        { "question": "Какой тег используется для создания самой большой надписи?", "options": ["<h6>", "<h1>", "<h2>", "<p>"], correctAnswer: "<h1>" },
+        { "question": "Что означает CSS?", "options": ["Cascading Style Sheets", "Computer Style Sheets", "Creative Style Sheets", "Colorful Style Sheets"], correctAnswer: "Cascading Style Sheets" },
+        { "question": "Какой атрибут HTML используется для определения встроенных стилей?", "options": ["styles", "style", "class", "font"], correctAnswer: "style" },
+        { "question": "Назовите три основных языка веб-программирования?", "options": ["HTML/CSS/JS", "Python/MySQL/JS", "JS/HTML/Docker", "Pascal/PHP/HTML"], correctAnswer: "HTML/CSS/JS" },
+        { "question": "Какой тег не является парным?", "options": ["<p>", "<div>", "<img>", "<a>"], correctAnswer: "<img>" },
+        { "question": "Для чего используется тег `<a>`?", "options": ["Для добавления аудио", "Для создания ссылки", "Для абзаца", "Для картинки"], correctAnswer: "Для создания ссылки" },
+        { "question": "Какое свойство CSS изменяет цвет фона?", "options": ["color", "background-color", "bgcolor", "background"], correctAnswer: "background-color" },
+        { "question": "Какой тег используется для создания нумерованного списка?", "options": ["<ul>", "<list>", "<ol>", "<dl>"], correctAnswer: "<ol>" },
+        { "question": "Что делает `display: none;` в CSS?", "options": ["Делает элемент прозрачным", "Скрывает элемент и убирает его из потока документа", "Скрывает элемент, но оставляет место", "Уменьшает элемент до нуля"], correctAnswer: "Скрывает элемент и убирает его из потока документа" },
+        { "question": "Как добавить комментарий в HTML?", "options": ["// Это комментарий", "/* Это комментарий */", "", "# Это комментарий"], correctAnswer: "" },
+        { "question": "Какой атрибут тега <a> указывает URL-адрес страницы, на которую ведет ссылка?", "options": ["src", "link", "href", "url"], correctAnswer: "href" },
+        { "question": "Какой тег определяет тело документа?", "options": ["<head>", "<body>", "<main>", "<div>"], correctAnswer: "<body>" },
+        { "question": "Какой тег используется для создания абзаца?", "options": ["<br>", "<p>", "<paragraph>", "<text>"], correctAnswer: "<p>" },
+        { "question": "Как сделать текст жирным в HTML?", "options": ["<bold>", "<b>", "<strong>", "И <b>, и <strong>"], correctAnswer: "И <b>, и <strong>" },
+        { "question": "Какой тег не является парным (не имеет закрывающего тега)?", "options": ["<p>", "<div>", "<br>", "<a>"], correctAnswer: "<br>" },
+        { "question": "Какой синтаксис правильный для CSS?", "options": ["body {color: black;}", "{body:color=black;}", "body: color=black;", "body; color: black;"], correctAnswer: "body {color: black;}" },
+        { "question": "Какое свойство CSS используется для изменения цвета текста?", "options": ["text-color", "font-color", "color", "fgcolor"], correctAnswer: "color" },
+        { "question": "Как подключить внешнюю таблицу стилей с именем 'style.css'?", "options": ["<style src=\"style.css\">", "<stylesheet>style.css</stylesheet>", "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">", "<link src=\"style.css\">"], correctAnswer: "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">" },
+        { "question": "Какой CSS селектор используется для выбора элемента по его id?", "options": [".", "#", "*", "id:"], correctAnswer: "#" },
+        { "question": "Какой CSS селектор используется для выбора элементов по их классу?", "options": ["#", "class:", ".", "*"], correctAnswer: "." },
+        { "question": "Какое свойство CSS контролирует размер текста?", "options": ["font-style", "text-size", "font-size", "text-style"], correctAnswer: "font-size" },
+        { "question": "Как правильно написать комментарий в CSS?", "options": ["// это комментарий", "", "/* это комментарий */", "' это комментарий"], correctAnswer: "/* это комментарий */" },
+        { "question": "Какое свойство используется для создания отступа внутри элемента?", "options": ["margin", "padding", "border", "space"], correctAnswer: "padding" },
+        { "question": "Какое свойство используется для создания отступа снаружи элемента?", "options": ["margin", "padding", "border", "offset"], correctAnswer: "margin" }
+    ];
+    
+    // ====================================================================================
+    // --- КОНЕЦ БЛОКА С ДАННЫми ---
+    // Дальше идет логика приложения, ее можно не трогать
+    // ====================================================================================
+
+    // --- DOM Элементы ---
+    const loginScreen = document.getElementById('login-screen');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultsScreen = document.getElementById('results-screen');
+    const studentsGrid = document.getElementById('students-grid');
+    const passwordModal = document.getElementById('password-modal');
+    const passwordForm = document.getElementById('password-form');
+    const passwordInput = document.getElementById('password-input');
+    const modalTitle = document.getElementById('modal-title');
+    const errorMessage = document.getElementById('error-message');
+    const timerEl = document.getElementById('timer');
+    const progressTextEl = document.getElementById('progress-text');
+    const questionTextEl = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const scoreTextEl = document.getElementById('score-text');
+    const resultsSummaryEl = document.getElementById('results-summary');
+    const retakeQuizBtn = document.getElementById('retake-quiz-btn');
+    const backToLoginBtn = document.getElementById('back-to-login-btn');
+
+
+    // --- Состояние приложения ---
+    let appState = {
+        currentUser: null,
+        currentQuizQuestions: [],
+        currentQuestionIndex: 0,
+        score: 0,
+        timer: null,
+        timeLeft: 15 * 60,
+        userAnswers: []
+    };
+
+    // --- Функции ---
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function generateQuestionSet() {
+        const shuffledTech = shuffleArray([...technicalQuestions]);
+        const selectedTechQuestions = shuffledTech.slice(0, 17);
+        
+        const allUserPersonalQuestions = appState.currentUser.personalQuestions;
+        const shuffledPersonal = shuffleArray([...allUserPersonalQuestions]);
+        const selectedPersonalQuestions = shuffledPersonal.slice(0, 3);
+        
+        appState.currentQuizQuestions = shuffleArray([...selectedTechQuestions, ...selectedPersonalQuestions]);
+    }
+
+    function renderLoginScreen() {
+        studentsGrid.innerHTML = '';
+        studentsData.forEach(student => {
+            const card = document.createElement('div');
+            card.className = 'student-card';
+            card.textContent = student.name;
+            card.onclick = () => showPasswordModal(student);
+            studentsGrid.appendChild(card);
+        });
+        showScreen('login');
+    }
+
+    function showPasswordModal(student) {
+        appState.currentUser = student;
+        modalTitle.textContent = `Вход для: ${student.name}`;
+        passwordInput.value = '';
+        errorMessage.textContent = '';
+        passwordModal.classList.add('active');
+        passwordInput.focus();
+    }
+    
+    function hidePasswordModal() {
+        passwordModal.classList.remove('active');
+    }
+
+    function handleLogin(event) {
+        event.preventDefault();
+        if (passwordInput.value === appState.currentUser.password) {
+            hidePasswordModal();
+            startQuiz();
+        } else {
+            errorMessage.textContent = 'Неверная дата рождения. Попробуйте еще раз.';
+        }
+    }
+
+    function startQuiz() {
+        appState.score = 0;
+        appState.currentQuestionIndex = 0;
+        appState.userAnswers = [];
+        appState.timeLeft = 15 * 60;
+        
+        generateQuestionSet();
+        showScreen('quiz');
+        showQuestion();
+        startTimer();
+    }
+
+    function showQuestion() {
+        if (appState.currentQuestionIndex >= appState.currentQuizQuestions.length) {
+            endQuiz();
+            return;
+        }
+
+        const question = appState.currentQuizQuestions[appState.currentQuestionIndex];
+        progressTextEl.textContent = `Вопрос ${appState.currentQuestionIndex + 1} / ${appState.currentQuizQuestions.length}`;
+        questionTextEl.textContent = question.question;
+        optionsContainer.innerHTML = '';
+
+        question.options.forEach(option => {
+            const optionEl = document.createElement('div');
+            optionEl.className = 'option';
+            optionEl.textContent = option;
+            optionEl.onclick = () => selectAnswer(option, optionEl, question);
+            optionsContainer.appendChild(optionEl);
+        });
+    }
+
+    function selectAnswer(selectedOption, optionEl, question) {
+        const isPersonal = question.correctAnswer === 'Любой ответ';
+        const isCorrect = isPersonal || (selectedOption === question.correctAnswer);
+
+        if (isCorrect) {
+            appState.score++;
+            optionEl.classList.add('correct');
+        } else {
+            optionEl.classList.add('incorrect');
+        }
+
+        appState.userAnswers.push({
+            question: question.question,
+            selected: selectedOption,
+            correct: isPersonal ? selectedOption : question.correctAnswer,
+            isCorrect: isCorrect
+        });
+
+        Array.from(optionsContainer.children).forEach(child => {
+            child.classList.add('disabled');
+            if (!isPersonal && child.textContent === question.correctAnswer) {
+                child.classList.add('correct');
+            }
+        });
+        
+        setTimeout(nextQuestion, 1500);
+    }
+    
+    function nextQuestion() {
+        appState.currentQuestionIndex++;
+        showQuestion();
+    }
+
+    function startTimer() {
+        timerEl.textContent = formatTime(appState.timeLeft);
+        appState.timer = setInterval(() => {
+            appState.timeLeft--;
+            timerEl.textContent = formatTime(appState.timeLeft);
+            if (appState.timeLeft <= 0) {
+                endQuiz();
+            }
+        }, 1000);
+    }
+    
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+    }
+
+    function endQuiz() {
+        clearInterval(appState.timer);
+        showScreen('results');
+        renderResults();
+        sendResultsToTelegram();
+    }
+
+    function renderResults() {
+        scoreTextEl.textContent = `${appState.score} / ${appState.currentQuizQuestions.length}`;
+        resultsSummaryEl.innerHTML = '';
+        appState.userAnswers.forEach((answer, index) => {
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            
+            let answerHtml = '';
+            if (answer.isCorrect) {
+                answerHtml = `<span class="user-answer correct">${answer.selected} (Верно)</span>`;
+            } else {
+                answerHtml = `<span class="user-answer incorrect">${answer.selected}</span>
+                              <span class="correct-answer">(Правильно: ${answer.correct})</span>`;
+            }
+
+            item.innerHTML = `<p>${index + 1}. ${answer.question}</p>
+                              <div>${answerHtml}</div>`;
+            resultsSummaryEl.appendChild(item);
+        });
+    }
+
+    function sendResultsToTelegram() {
+        if (!TELEGRAM_CONFIG.BOT_TOKEN || TELEGRAM_CONFIG.BOT_TOKEN === 'СЮДА_ВАШ_ТОКЕН') {
+            console.warn('Токен Telegram бота не настроен. Результаты не будут отправлены.');
+            return;
+        }
+        if (!TELEGRAM_CONFIG.CHAT_ID || TELEGRAM_CONFIG.CHAT_ID === 'СЮДА_ID_ВАШЕГО_ЧАТА') {
+            console.warn('ID чата Telegram не настроен. Результаты не будут отправлены.');
+            return;
+        }
+
+        let message = `*Результаты теста для ${appState.currentUser.name}*\n\n`;
+        message += `*Итоговый счет: ${appState.score} / ${appState.currentQuizQuestions.length}*\n\n`;
+
+        appState.userAnswers.forEach((answer, index) => {
+            message += `*${index + 1}. ${answer.question}*\n`;
+            if (answer.isCorrect) {
+                message += `   _Ответ:_ ${answer.selected} (✅)\n`;
+            } else {
+                message += `   _Ответ:_ ~${answer.selected}~ (❌)\n`;
+                message += `   _Правильно:_ ${answer.correct}\n`;
+            }
+            message += '\n';
+        });
+        
+        const url = `https://api.telegram.org/bot${TELEGRAM_CONFIG.BOT_TOKEN}/sendMessage`;
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CONFIG.CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok) {
+                console.log('Результаты успешно отправлены в Telegram.');
+            } else {
+                console.error('Ошибка отправки в Telegram:', data.description);
+                if (data.description.includes('chat not found')) {
+                    console.error('Убедитесь, что ID чата правильный и бот добавлен в этот чат/группу.');
+                }
+            }
+        })
+        .catch(error => console.error('Сетевая ошибка при отправке в Telegram:', error));
+    }
+
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`${screenId}-screen`).classList.add('active');
+    }
+
+    // --- Инициализация ---
+    document.addEventListener('DOMContentLoaded', () => {
+        renderLoginScreen();
+        passwordForm.addEventListener('submit', handleLogin);
+        passwordModal.addEventListener('click', (e) => {
+            if (e.target === passwordModal) {
+                hidePasswordModal();
+            }
+        });
+        retakeQuizBtn.onclick = startQuiz;
+        backToLoginBtn.onclick = renderLoginScreen;
+    });
+
+    </script>
+</body>
+</html>
